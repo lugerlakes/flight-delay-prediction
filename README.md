@@ -4,6 +4,7 @@ Predictive analytics project aimed at estimating the likelihood of delays in fli
 
 ## 📁 Project Structure
 
+```
 flight-delay-prediction/
 ├── data/                       # Data directory
 │   ├── raw/                    # Original/raw data
@@ -29,11 +30,37 @@ flight-delay-prediction/
 ├── LICENSE                     # License for the project
 ├── README.md                   # Project overview and documentation
 └── requirements.txt            # List of Python dependencies
-
-## 🚀 Getting Started
-```bash
-git clone https://github.com/lugerlakes/flight-delay-prediction.git
-cd flight-delay-prediction
-pip install -r requirements.txt
 ```
+## Environment Setup
+This project requires **Python ≥ 3.11**
+
+---
+
+1. **Clone the repository:**
+ ```bash
+    git clone https://github.com/lugerlakes/flight-delay-prediction.git
+    cd covid-nhmm
+```
+2. Create and activate the virtual environment:
+
+```bash
+    python3 -m venv flight-delay-prediction
+    source flight-delay-prediction/bin/activate
+```
+3. Install dependencies:
+
+```bash
+    pip install -r requirements.txt
+```
+---
+
+## Key Dependencies
+- Python:
+    - pandas
+    - numpy
+    - matplotlib
+    - seaborn
+    - scikit-learn
+    - xgboost
+    - jupyter
 
