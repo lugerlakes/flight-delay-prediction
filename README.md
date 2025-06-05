@@ -44,7 +44,7 @@ This project requires **Python ≥ 3.11**
 1. **Clone the repository:**
  ```bash
     git clone https://github.com/lugerlakes/flight-delay-prediction.git
-    cd covid-nhmm
+    cd flight-delay-prediction
 ```
 2. Create and activate the virtual environment:
 
