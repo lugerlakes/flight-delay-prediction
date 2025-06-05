@@ -8,15 +8,11 @@ flight-delay-prediction/
 ├── data/                       # Data directory
 │   ├── raw/                    # Original/raw data
 │   └── processed/              # Processed data with engineered features
-│
 ├── models/                     # Trained or serialized models
-|
 ├── notebooks/                  # Jupyter Notebooks for exploration and modeling
 │   └── flight_delay_prediction.ipynb          # Main analysis notebook
-|
 ├── reports/                    # Generated analysis reports and final visuals
 │   └── figures/                # Plots and charts for reporting and EDA
-|
 ├── src/                        # Source code for use in this project
 │   ├── __init__.py             # Makes src a Python module
 │   ├── data/                   # Data loading and cleaning scripts
@@ -29,13 +25,9 @@ flight-delay-prediction/
 │   │   └── evaluate_model.py   # Evaluation and validation utilities
 │   └── visualization/          # Custom visualization functions
 │       └── visualize.py        # Plots for EDA and results presentation
-|
 ├── .gitignore                  # Files and folders to be ignored by git
-|
 ├── LICENSE                     # License for the project
-|
 ├── README.md                   # Project overview and documentation
-|
 └── requirements.txt            # List of Python dependencies
 
 ## 🚀 Getting Started
