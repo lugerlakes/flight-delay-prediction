@@ -2,8 +2,13 @@
 
 Predictive analytics project aimed at estimating the likelihood of delays in flights operated from/to Santiago Airport (SCL) in 2017. Includes exploratory data analysis, feature engineering, supervised model training, and robust evaluation with a reproducible approach.
 
-## 📁 Project Structure
+## 🧠 Goals
+- Analyze flight delays at SCL airport during 2017
+- Create meaningful synthetic features
+- Train classification models to predict delays
+- Evaluate performance and identify key drivers of delay
 
+## 📁 Project Structure
 ```
 flight-delay-prediction/
 ├── data/                       # Data directory
