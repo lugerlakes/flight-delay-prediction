@@ -11,34 +11,34 @@ Predictive analytics project aimed at estimating the likelihood of delays in fli
 ## 📁 Project Structure
 ```
 flight-delay-prediction/
-├── data/ # Data directory
-│ ├── raw/ # Original/raw data
-│ └── processed/ # Processed data with engineered features
-├── models/ # Trained or serialized models
-├── notebooks/ # Jupyter notebooks for exploration and modeling
-│ └── solution.ipynb # Main notebook with EDA, features and modeling
-├── reports/ # Generated reports and final visual outputs
-│ └── figures/ # Visualizations saved from EDA or modeling
-├── src/ # Source code for modular and reusable logic
-│ ├── init.py 
-│ ├── data/ # Data loading and preprocessing scripts
-│ │ ├── load_data.py # Function to read raw CSV files
-│ │ └── preprocess.py # Parsing and cleaning logic
-│ ├── features/ # Feature engineering logic
-│ │ └── build_features.py # Functions to create and export features
-│ ├── models/ # Model training and evaluation logic
-│ │ ├── train_model.py # Training pipeline
-│ │ └── evaluate_model.py # Evaluation metrics and analysis
-│ └── visualization/ # Custom visualization utilities
-│ └── visualize.py # EDA and reporting plots
-├── tests/ # Unit tests and exploratory script runners
-│ ├── test_features.py # Test feature generation pipeline
-│ ├── test_visualize.py # Basic EDA visualization checks
-│ └── test_visualize_advanced.py # Advanced visual analytics by category
-├── .gitignore # Files/directories to ignore in version control
-├── LICENSE # License file
-├── README.md # Project documentation and structure
-└── requirements.txt # Python dependencies
+├── data/ # Original and processed datasets
+│ ├── raw/ # Raw CSV files (original flight data)
+│ └── processed/ # Cleaned data with engineered features
+├── models/ # Serialized trained models
+├── notebooks/ # Jupyter notebooks for EDA and modeling
+│ └── solution.ipynb # Main notebook with full workflow
+├── reports/ # Final reports and visualizations
+│ └── figures/ # Saved plots from EDA and modeling
+├── src/ # Modular source code for reuse
+│ ├── init.py
+│ ├── data/ # Data loading and preprocessing logic
+│ │ ├── load_data.py
+│ │ └── preprocess.py
+│ ├── features/ # Feature engineering scripts
+│ │ └── build_features.py
+│ ├── models/ # Training and evaluation scripts
+│ │ ├── train_model.py
+│ │ └── evaluate_model.py
+│ └── visualization/ # Custom visualizations
+│ └── visualize.py
+├── tests/ # Unit and integration tests
+│ ├── test_features.py
+│ ├── test_visualize.py
+│ └── test_visualize_advanced.py
+├── .gitignore # Files/folders to exclude from git
+├── LICENSE # Project license
+├── README.md # Project overview and documentation
+└── requirements.txt # Project dependencies
 ```
 ---
 ## 📦 Installation
