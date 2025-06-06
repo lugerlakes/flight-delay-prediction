@@ -48,13 +48,14 @@ This project requires **Python = 3.10**
    git clone https://github.com/lugerlakes/flight-delay-prediction.git
    cd flight-delay-prediction
 ```
-2. - (Option A) Create and activate a virtual environment with venv:
+2. Create and activate a virtual environment
+- (Option A) with venv:
 ```bash
     python -m venv .flight-delay-prediction
     .\.flight-delay-prediction\Scripts\activate  # On Windows
     source .flight-delay-prediction/bin/activate # On macOS/Linux
 ```
-- (Option B) Or use conda to create the environment:
+- (Option B) Or use conda:
 ```bash
     conda create --name flight-delay-prediction python=3.10
     conda activate flight-delay-prediction
