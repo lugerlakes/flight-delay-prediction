@@ -3,31 +3,22 @@ import numpy as np
 from datetime import datetime
 
 def is_high_season(fecha: pd.Timestamp) -> int:
-    """
-    Determine if the date falls within high season.
-
-    Parameters
-    ----------
-    fecha : pd.Timestamp
-
-    Returns
-    -------
-    int : 1 if high season, 0 otherwise
-    """
     if pd.isnull(fecha):
         return 0
-    
+
     year = fecha.year
+
     ranges = [
-        (f"{year}-12-15", f"{year + 1}-03-03"),
-        (f"{year}-07-15", f"{year}-07-31"),
-        (f"{year}-09-11", f"{year}-09-30"),
+        (pd.Timestamp(f"{year}-12-15"), pd.Timestamp(f"{year + 1}-03-03")),
+        (pd.Timestamp(f"{year}-07-15"), pd.Timestamp(f"{year}-07-31")),
+        (pd.Timestamp(f"{year}-09-11"), pd.Timestamp(f"{year}-09-30")),
     ]
-    
+
     for start, end in ranges:
-        if pd.to_datetime(start) <= fecha <= pd.to_datetime(end):
+        if start <= fecha <= end:
             return 1
     return 0
+
 
 def get_period_day(fecha: pd.Timestamp) -> str:
     """
