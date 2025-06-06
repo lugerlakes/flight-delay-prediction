@@ -2,22 +2,40 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-def is_high_season(fecha: pd.Timestamp) -> int:
-    if pd.isnull(fecha):
-        return 0
+def is_high_season(fecha):
+    """
+    Determine whether a given date falls within Chile's high season travel periods.
 
-    year = fecha.year
+    High season is defined as any date within the following ranges:
+    - Dec 15, 2016 to Mar 3, 2017  (Summer holidays)
+    - Jul 15, 2017 to Jul 31, 2017 (Winter break)
+    - Sep 11, 2017 to Sep 30, 2017 (National holidays)
+    - Dec 15, 2017 to Jan 3, 2018  (Christmas & New Year)
 
-    ranges = [
-        (pd.Timestamp(f"{year}-12-15"), pd.Timestamp(f"{year + 1}-03-03")),
-        (pd.Timestamp(f"{year}-07-15"), pd.Timestamp(f"{year}-07-31")),
-        (pd.Timestamp(f"{year}-09-11"), pd.Timestamp(f"{year}-09-30")),
+    Parameters
+    ----------
+    fecha : datetime
+        The departure date to evaluate (typically `fecha_i`).
+
+    Returns
+    -------
+    int
+        1 if the date is in high season, 0 otherwise.
+    """
+    import pandas as pd
+
+    high_season_ranges = [
+        ("2016-12-15", "2017-03-03"),
+        ("2017-07-15", "2017-07-31"),
+        ("2017-09-11", "2017-09-30"),
+        ("2017-12-15", "2018-01-03"),
     ]
 
-    for start, end in ranges:
-        if start <= fecha <= end:
+    for start, end in high_season_ranges:
+        if pd.to_datetime(start) <= fecha <= pd.to_datetime(end):
             return 1
     return 0
+
 
 
 def get_period_day(fecha: pd.Timestamp) -> str:
