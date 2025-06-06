@@ -37,7 +37,7 @@ flight-delay-prediction/
 └── requirements.txt            # List of Python dependencies
 ```
 ## Environment Setup
-This project requires **Python ≥ 3.11**
+This project requires **Python = 3.10**
 
 ---
 
@@ -49,8 +49,8 @@ This project requires **Python ≥ 3.11**
 2. Create and activate the virtual environment:
 
 ```bash
-    python3 -m venv flight-delay-prediction
-    source flight-delay-prediction/bin/activate
+    conda create --name flight-delay-prediction python=3.10
+    conda activate flight-delay-prediction
 ```
 3. Install dependencies:
 
