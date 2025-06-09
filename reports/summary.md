@@ -1,111 +1,113 @@
-
 # Santiago Flight Delay Prediction – Full Challenge Solution
 
 ## Problem Overview
 
-The objective was to **predict the probability of delay** for flights **taking off or landing at Santiago's Airport (SCL)** during 2017. The dataset includes scheduled and operational metadata per flight, and the ultimate target is whether a delay of more than 15 minutes occurred.
+The goal was to **predict the probability of a flight delay over 15 minutes** for departures and arrivals at **Santiago Airport (SCL)** during 2017. The dataset includes flight schedules, operators, and metadata used to generate a binary classification target.
 
 ---
 
-## 1. Data Distribution & Exploratory Analysis
+## 1. Data Exploration & Insights
 
-We performed exploratory data analysis (EDA) on categorical and temporal variables such as:
-- **Destination city**, **airline**, **day of week**, **month**, **type of flight** (national/international).
-- We visualized flight distributions and delay rates across those dimensions using bar plots and heatmaps.
+Exploratory analysis included temporal and categorical variables:
+- **Month, day of week, airline, flight type, and destination.**
+- We used bar plots and heatmaps to identify delay patterns.
 
-### Key Insights:
-- Certain **airlines and destinations** had significantly higher delay rates.
-- **Mondays and Fridays** showed elevated delays, likely due to business traffic.
-- **September and December** displayed increased variation due to holiday peaks.
-
----
-
-## 2. Feature Engineering (Synthetic Columns)
-
-We created the following **synthetic features** and exported the resulting dataset to `synthetic_features.csv`:
-
-| Feature         | Description                                                                 |
-|----------------|-------------------------------------------------------------------------------|
-| `high_season`  | 1 if flight falls in Chilean peak travel periods, else 0                     |
-| `min_diff`     | Difference (in minutes) between scheduled and actual flight time             |
-| `delay_15`     | 1 if `min_diff > 15`, otherwise 0 (binary classification target)             |
-| `period_day`   | Morning (5–11:59), Afternoon (12–18:59), Night (19–4:59) from scheduled time |
-| `is_holiday`   | 1 if flight is on a Chilean national holiday                                 |
-| `is_strike_day`| 1 if flight occurred during simulated known strike dates                     |
+### Key Findings:
+- Delay peaks occurred on **Mondays, Fridays, and holidays**.
+- Some **airlines and destinations** consistently experienced more delays.
+- **Strikes** showed a clear spike in delay probability (from ~18% to ~35%).
 
 ---
 
-## 3. Delay Behavior Across Variables
+## 2. Feature Engineering
 
-We analyzed `delay_15` against categorical features:
+We engineered additional features and exported the processed dataset to `synthetic_features.csv`.
 
-- **Destination (`siglades`)**: Some cities showed chronically higher delay rates.
-- **Airline (`opera`)**: Budget carriers had higher average delays.
-- **Month & day of week**: Clear peaks around weekends and public holidays.
-- **Flight type (`tipovuelo`)**: National flights experienced more delays than international ones.
-- **Strikes** had a strong correlation with delay spikes (from ~18% to ~35%).
-
-These variables were selected for modeling due to their strong association with the target.
-
----
-
-## 4. Model Training
-
-We trained three classifiers using pipelines with preprocessing:
-
-| Model              | Description                            |
-|-------------------|----------------------------------------|
-| `RandomForest`     | Tree-based ensemble classifier          |
-| `LogisticRegression`| Linear, interpretable baseline         |
-| `XGBoost`          | Gradient-boosted trees with fine control|
-
-Each model was trained on the enriched dataset and evaluated with the same test split.
+| Feature          | Description                                                     |
+|------------------|-----------------------------------------------------------------|
+| `high_season`    | Peak travel season in Chile                                     |
+| `min_diff`       | Time difference between scheduled and actual departure          |
+| `delay_15`       | Target: 1 if delay > 15 minutes, else 0                         |
+| `period_day`     | Time slot (Morning, Afternoon, Night)                           |
+| `is_holiday`     | 1 if flight is on a national holiday                            |
+| `is_strike_day`  | 1 if flight date matches simulated strike schedule              |
 
 ---
 
-## 5. Model Evaluation
+## 3. Delay Behavior Analysis
 
-### Metrics Used:
-- **Accuracy**: General correctness
-- **Recall**: Sensitivity to true delays (priority)
-- **Precision**: Avoidance of false positives
-- **F1 Score**: Harmonic mean of precision & recall
-- **ROC AUC**: Overall class separability
+We observed strong relationships between `delay_15` and the following:
+- **Destination (`siglades`)**
+- **Airline (`opera`)**
+- **Flight type (`tipovuelo`)**
+- **Calendar context (`is_holiday`, `is_strike_day`)**
 
-### Results Summary:
-
-| Model              | Accuracy | Recall | Precision | F1 Score | ROC AUC |
-|-------------------|----------|--------|-----------|----------|---------|
-| LogisticRegression| 63.0%    | **58.3%** | 26.9%    | **0.368** | 0.657   |
-| RandomForest      | 70.0%    | 41.9%  | 28.7%    | 0.341    | 0.634   |
-| XGBoost           | **82.3%**| 11.0%  | **62.3%** | 0.186    | **0.705** |
-
-### Best Model:
-- **Logistic Regression** had the **highest F1 Score**, making it the most balanced and reliable model for predicting delays in practice.
-- XGBoost, while high in AUC, failed to detect delays (low recall), and would underperform operationally.
+These variables were selected as model features due to high correlation with the target.
 
 ---
 
-## Most Influential Variables
+## 4. Model Training & Threshold Tuning
 
-According to feature importance and correlation analysis:
-- `is_strike_day` was highly predictive.
-- `tipovuelo`, `period_day`, `opera`, and `siglades` were key categorical drivers.
-- The addition of calendar-based variables improved **recall and F1 score**, proving the value of context.
+Three supervised classifiers were trained using pipelines:
+
+| Model                | Description                            |
+|----------------------|----------------------------------------|
+| `RandomForest`       | Tree-based ensemble                    |
+| `LogisticRegression` | Linear, interpretable baseline         |
+| `XGBoost`            | Gradient boosting for structured data  |
+
+We also applied **threshold tuning** on Logistic Regression using the Precision-Recall curve, selecting an **optimal threshold of 0.48** to maximize F1 score and recall.
 
 ---
 
-## Suggested Improvements & Next Steps
+## 5. Evaluation Results
 
-1. **Threshold Tuning** – Adjust probability cutoff to better balance precision/recall.
-    - We'll explore how changing the default decision threshold (usually 0.5) affects precision and recall. This involves:
-    - Plotting the Precision-Recall vs Threshold curve
-    - Finding an optimal point based on your business goal (e.g., minimizing false negatives)
-    - Updating predictions using this tuned threshold
-2. **Model Ensembling** – Try a VotingClassifier to mix logistic + random forest.
-    - Train both base models
-    - Wrap them in a VotingClassifier with voting='soft'
-    - Evaluate with the same metrics (F1, AUC, etc.)
-3. **External Data** – Integrate real weather data of SCEL (METAR/TAF historical data or public climate archives).
-4. **Deployment** – Serve the model via API or Streamlit dashboard. Track performance over time. 
+| Model                      | Accuracy | Recall | Precision | F1 Score | ROC AUC |
+|---------------------------|----------|--------|-----------|----------|---------|
+| LogisticRegression (0.48) | 60.0%    | **63.9%** | 26.0%    | **0.370** | 0.657   |
+| RandomForest              | 70.0%    | 41.9%  | 28.7%    | 0.341    | 0.634   |
+| XGBoost                   | **82.3%**| 11.0%  | **62.3%** | 0.186    | **0.705** |
+| VotingClassifier (LR+RF)  | 71.3%    | 45.1%  | 31.0%    | 0.368    | 0.660   |
+
 ---
+
+## 6. Model Interpretation
+
+### ✅ Logistic Regression (Threshold = 0.48)
+- Best F1 score and recall.
+- Highly suitable if **recall is the priority** (i.e., identifying as many delays as possible).
+- Benefits the most from added features like `is_holiday` and `is_strike_day`.
+
+### 🌲 Random Forest
+- Strong baseline with good accuracy and ROC AUC.
+- Balanced but slightly lower recall than LR.
+- Easy to interpret with feature importances.
+
+### ⚙️ XGBoost
+- Very high accuracy and AUC.
+- **Extremely low recall** makes it impractical for this task.
+- Suitable only if the priority is to **avoid false positives**.
+
+### 🧠 VotingClassifier (RF + LR, threshold = 0.5)
+- Combines strengths of both base models.
+- Offers better recall than Random Forest, and better precision than LR alone.
+- **Did not include the tuned threshold** in the ensemble (uses 0.5 by default).
+
+---
+
+## 7. Most Important Features
+
+Feature analysis (e.g. from Random Forest):
+- `is_strike_day`, `tipovuelo`, `period_day`, and `opera` were most influential.
+- Added features provided meaningful context for the model to detect delays.
+
+---
+
+## 8. Recommendations & Next Steps
+
+1. **Integrate External Data**  
+   - Weather could further enhance accuracy.
+
+2. **Deploy with Monitoring**  
+   - Wrap best model in an API or dashboard (e.g., Streamlit).
+   - Set up alerting for drift in delay patterns or drop in recall.
