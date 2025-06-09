@@ -1,14 +1,14 @@
-# ✈️ Flight Delay Prediction
+# Flight Delay Prediction
 
 Predictive analytics project aimed at estimating the likelihood of delays in flights operated from/to Santiago Airport (SCL) in 2017. Includes exploratory data analysis, feature engineering, supervised model training, and robust evaluation with a reproducible approach.
 
-## 🧠 Goals
+## Goals
 - Analyze flight delays at SCL airport during 2017
 - Create meaningful synthetic features
 - Train classification models to predict delays
 - Evaluate performance and identify key drivers of delay
 
-## 📁 Project Structure
+## Project Structure
 ```
 flight-delay-prediction/
 ├── data/ # Original and processed datasets
@@ -41,7 +41,7 @@ flight-delay-prediction/
 └── requirements.txt # Project dependencies
 ```
 ---
-## 📦 Installation
+## Installation
 This project requires **Python = 3.10**
 1. Clone the repository:
 ```bash
@@ -76,9 +76,9 @@ This project requires **Python = 3.10**
     - xgboost
     - jupyter
 
-## 🚀 How to Run
+## How to Run
 
-### 🔍 Exploratory Analysis and Modeling
+### Exploratory Analysis and Modeling
 
 Open the notebook:
 ```bash
@@ -94,7 +94,7 @@ Follow the sections for:
 
 - Model training and evaluation
 
-## ✅ Run tests and visualizations
+## Run tests and visualizations
 From the project root:
 ```bash
 # Run feature pipeline test

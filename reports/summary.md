@@ -72,7 +72,7 @@ Each model was trained on the enriched dataset and evaluated with the same test 
 - **F1 Score**: Harmonic mean of precision & recall
 - **ROC AUC**: Overall class separability
 
-### 🔍 Results Summary:
+### Results Summary:
 
 | Model              | Accuracy | Recall | Precision | F1 Score | ROC AUC |
 |-------------------|----------|--------|-----------|----------|---------|
@@ -80,13 +80,13 @@ Each model was trained on the enriched dataset and evaluated with the same test 
 | RandomForest      | 70.0%    | 41.9%  | 28.7%    | 0.341    | 0.634   |
 | XGBoost           | **82.3%**| 11.0%  | **62.3%** | 0.186    | **0.705** |
 
-### 🏆 Best Model:
+### Best Model:
 - **Logistic Regression** had the **highest F1 Score**, making it the most balanced and reliable model for predicting delays in practice.
 - XGBoost, while high in AUC, failed to detect delays (low recall), and would underperform operationally.
 
 ---
 
-## 📈 Most Influential Variables
+## Most Influential Variables
 
 According to feature importance and correlation analysis:
 - `is_strike_day` was highly predictive.
@@ -95,12 +95,17 @@ According to feature importance and correlation analysis:
 
 ---
 
-## 🚀 Suggested Improvements & Next Steps
+## Suggested Improvements & Next Steps
 
 1. **Threshold Tuning** – Adjust probability cutoff to better balance precision/recall.
-2. **Time-based Aggregates** – Add average delay trends over previous days or per airline.
-3. **External Data** – Integrate real weather data, congestion indicators, or aircraft models.
-4. **Model Ensembling** – Try a VotingClassifier to mix logistic + random forest.
-5. **Deployment** – Serve the model via API or Streamlit dashboard. Track performance over time.
-
+    - We'll explore how changing the default decision threshold (usually 0.5) affects precision and recall. This involves:
+    - Plotting the Precision-Recall vs Threshold curve
+    - Finding an optimal point based on your business goal (e.g., minimizing false negatives)
+    - Updating predictions using this tuned threshold
+2. **Model Ensembling** – Try a VotingClassifier to mix logistic + random forest.
+    - Train both base models
+    - Wrap them in a VotingClassifier with voting='soft'
+    - Evaluate with the same metrics (F1, AUC, etc.)
+3. **External Data** – Integrate real weather data of SCEL (METAR/TAF historical data or public climate archives).
+4. **Deployment** – Serve the model via API or Streamlit dashboard. Track performance over time. 
 ---
