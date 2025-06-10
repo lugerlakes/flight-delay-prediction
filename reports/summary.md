@@ -1,113 +1,76 @@
-# Santiago Flight Delay Prediction – Full Challenge Solution
+## Interpretation of Results and Model Selection
 
-## Problem Overview
+| Model                           | Accuracy | Recall | Precision | F1 Score | ROC AUC | Key Insight                                                 |
+|--------------------------------|----------|--------|-----------|----------|---------|-------------------------------------------------------------|
+| Logistic Regression (tuned)    | 59.7%    | **63.9%** | 26.0%    | **0.369** | 0.657   | Highest sensitivity to delayed flights                      |
+| Voting Classifier              | **71.3%**| 45.1%  | 31.0%    | **0.368** | **0.660** | Balanced and robust ensemble performance                    |
+| Logistic Regression (default)  | 63.0%    | 58.3%  | 26.9%    | **0.368** | 0.657   | Transparent and effective without threshold tuning          |
+| Random Forest                  | 70.0%    | 41.9%  | 28.7%    | 0.341    | 0.634   | Interpretable and stable under different scenarios          |
+| XGBoost                        | 82.3%    | 11.0%  | **62.3%** | 0.186    | **0.705** | High AUC, but impractical for delay detection due to low recall |
 
-The goal was to **predict the probability of a flight delay over 15 minutes** for departures and arrivals at **Santiago Airport (SCL)** during 2017. The dataset includes flight schedules, operators, and metadata used to generate a binary classification target.
 
----
+In the context of commercial airline operations, anticipating flight delays is not merely a statistical exercise—it has direct consequences for resource allocation, passenger experience, operational costs, and tactical scheduling. Being able to predict a delay in advance enables proactive measures such as adjusting gates, reallocating ground staff, notifying passengers, and preventing cascading disruptions across the flight network.
 
-## 1. Data Exploration & Insights
+From this operational standpoint, we evaluated five predictive models with a strong emphasis on recall, which indicates the ability to correctly identify flights that will actually be delayed. High recall is crucial because failing to anticipate a delay is typically more costly than triggering a false alert.
 
-Exploratory analysis included temporal and categorical variables:
-- **Month, day of week, airline, flight type, and destination.**
-- We used bar plots and heatmaps to identify delay patterns.
+Among all models, the Logistic Regression with a tuned decision threshold (0.48) delivered the highest recall (63.9%), making it the most sensitive to delayed flights. This threshold adjustment allowed the model to capture more true delays at the cost of lower precision—a trade-off that is acceptable in scenarios where the priority is to act early and mitigate impact. For airline operations, especially during peak seasons or congested schedules, this model serves as a valuable early warning tool to reduce passenger dissatisfaction and logistical bottlenecks.
 
-### Key Findings:
-- Delay peaks occurred on **Mondays, Fridays, and holidays**.
-- Some **airlines and destinations** consistently experienced more delays.
-- **Strikes** showed a clear spike in delay probability (from ~18% to ~35%).
+The Voting Classifier, which combines Logistic Regression and Random Forest, demonstrated the best balance between precision and recall, achieving a recall of 45.1% and an F1 Score nearly identical to the tuned logistic model. It leverages the sensitivity of logistic regression and the robustness of Random Forest, making it particularly well-suited for real-time systems that require both resilience and consistency under varying flight conditions like national holidays or labor strikes.
 
----
+The default Logistic Regression model (threshold = 0.5) maintained excellent performance, reaching a recall of 58.3% and an F1 Score of 36.8%, only slightly below the tuned version. It stands out for its simplicity and interpretability, making it a strong candidate for immediate deployment without threshold calibration, especially where ease of explanation and operational traceability are critical.
 
-## 2. Feature Engineering
+Random Forest, while slightly weaker in terms of recall (41.9%), proved to be a stable and interpretable model. Its tree-based structure provides transparency about how variables like flight type, time of day, and destination city influence the prediction. It is a valuable fallback option or even a co-pilot model in a decision support system.
 
-We engineered additional features and exported the processed dataset to `synthetic_features.csv`.
+Lastly, XGBoost delivered the highest accuracy (82.3%) and ROC AUC (70.5%), but had a recall of only 11.0%. This makes it highly conservative—very precise, but missing the vast majority of actual delays. For day-to-day operations where early detection of disruptions is critical, this model is not recommended, unless the specific use case demands extremely low false-positive rates.
 
-| Feature          | Description                                                     |
-|------------------|-----------------------------------------------------------------|
-| `high_season`    | Peak travel season in Chile                                     |
-| `min_diff`       | Time difference between scheduled and actual departure          |
-| `delay_15`       | Target: 1 if delay > 15 minutes, else 0                         |
-| `period_day`     | Time slot (Morning, Afternoon, Night)                           |
-| `is_holiday`     | 1 if flight is on a national holiday                            |
-| `is_strike_day`  | 1 if flight date matches simulated strike schedule              |
+A key insight from this analysis is the impact of feature engineering. Contextual variables like is_holiday, is_strike_day, and the inclusion of historical weather data significantly enhanced model performance. These features improved the model’s ability to generalize under non-standard operational conditions such as holidays, strikes, and adverse weather. This validates the importance of integrating external operational data sources to boost predictive accuracy and reliability in real-world airline scenarios.
 
----
+______________________________
 
-## 3. Delay Behavior Analysis
+✈️ Deployment Strategy – Delay Prediction API and Interface
+🎯 Objective
+Enable airline staff or flight schedulers to predict delay risk in real-time by entering flight details via a web interface or querying a backend API.
 
-We observed strong relationships between `delay_15` and the following:
-- **Destination (`siglades`)**
-- **Airline (`opera`)**
-- **Flight type (`tipovuelo`)**
-- **Calendar context (`is_holiday`, `is_strike_day`)**
+🧱 Suggested Structure
+1. FastAPI Backend (Model Inference API)
+Expose a /predict endpoint:
 
-These variables were selected as model features due to high correlation with the target.
+Input: JSON with flight details (airline, destination, flight type, date, etc.)
 
----
+Output: delay probability and binary prediction
 
-## 4. Model Training & Threshold Tuning
+Load model from pkl or joblib
 
-Three supervised classifiers were trained using pipelines:
+Option to choose between models (LogReg, Voting, etc.)
 
-| Model                | Description                            |
-|----------------------|----------------------------------------|
-| `RandomForest`       | Tree-based ensemble                    |
-| `LogisticRegression` | Linear, interpretable baseline         |
-| `XGBoost`            | Gradient boosting for structured data  |
+Log predictions to disk or DB
 
-We also applied **threshold tuning** on Logistic Regression using the Precision-Recall curve, selecting an **optimal threshold of 0.48** to maximize F1 score and recall.
+2. Streamlit Frontend (Human Interface)
+User selects:
 
----
+Airline (opera)
 
-## 5. Evaluation Results
+Destination (siglades)
 
-| Model                      | Accuracy | Recall | Precision | F1 Score | ROC AUC |
-|---------------------------|----------|--------|-----------|----------|---------|
-| LogisticRegression (0.48) | 60.0%    | **63.9%** | 26.0%    | **0.370** | 0.657   |
-| RandomForest              | 70.0%    | 41.9%  | 28.7%    | 0.341    | 0.634   |
-| XGBoost                   | **82.3%**| 11.0%  | **62.3%** | 0.186    | **0.705** |
-| VotingClassifier (LR+RF)  | 71.3%    | 45.1%  | 31.0%    | 0.368    | 0.660   |
+Flight type (tipovuelo)
 
----
+Scheduled date/time (fecha_i)
 
-## 6. Model Interpretation
+Output:
 
-### ✅ Logistic Regression (Threshold = 0.48)
-- Best F1 score and recall.
-- Highly suitable if **recall is the priority** (i.e., identifying as many delays as possible).
-- Benefits the most from added features like `is_holiday` and `is_strike_day`.
+Probability of delay
 
-### 🌲 Random Forest
-- Strong baseline with good accuracy and ROC AUC.
-- Balanced but slightly lower recall than LR.
-- Easy to interpret with feature importances.
+Recommended action (flag, reschedule, monitor)
 
-### ⚙️ XGBoost
-- Very high accuracy and AUC.
-- **Extremely low recall** makes it impractical for this task.
-- Suitable only if the priority is to **avoid false positives**.
+Optional: display feature importance or explanation
 
-### 🧠 VotingClassifier (RF + LR, threshold = 0.5)
-- Combines strengths of both base models.
-- Offers better recall than Random Forest, and better precision than LR alone.
-- **Did not include the tuned threshold** in the ensemble (uses 0.5 by default).
+3. Modal Deployment (Serverless Execution)
+Package both FastAPI and Streamlit apps
 
----
+Deploy as:
 
-## 7. Most Important Features
+modal.Function (FastAPI inference)
 
-Feature analysis (e.g. from Random Forest):
-- `is_strike_day`, `tipovuelo`, `period_day`, and `opera` were most influential.
-- Added features provided meaningful context for the model to detect delays.
+modal.App (Streamlit interface)
 
----
-
-## 8. Recommendations & Next Steps
-
-1. **Integrate External Data**  
-   - Weather could further enhance accuracy.
-
-2. **Deploy with Monitoring**  
-   - Wrap best model in an API or dashboard (e.g., Streamlit).
-   - Set up alerting for drift in delay patterns or drop in recall.
+Easily scalable and cost-effective
