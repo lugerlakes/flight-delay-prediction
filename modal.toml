@@ -1,0 +1,22 @@
+# modal.toml — Config for Modal Deployment of API and Streamlit UI
+
+# Project name
+name = "flight-delay-app"
+
+# -----------------------------
+# FastAPI Inference API Service
+# -----------------------------
+[services.api]
+type = "function"
+entrypoint = "modal_stub.py::run_api"     # Path to FastAPI function
+port = 8000
+allow_concurrent_inputs = true
+
+# -----------------------------
+# Streamlit Frontend Interface
+# -----------------------------
+[services.ui]
+type = "function"
+entrypoint = "modal_streamlit_stub.py::run_streamlit"  # Path to Streamlit function
+port = 8501
+allow_concurrent_inputs = false

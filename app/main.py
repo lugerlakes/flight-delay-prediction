@@ -1,22 +1,36 @@
-# FastAPI Inference API
+# app/main.py — FastAPI Inference API
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 import joblib
 import pandas as pd
-import os
 from datetime import datetime
+import os
+from dotenv import load_dotenv
 from app.utils import preprocess_input, log_prediction
 
-app = FastAPI()
+# Load environment variables
+load_dotenv()
+
+MODEL_DIR = os.getenv("MODEL_DIR", "models")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "logistic_regression")
+
+app = FastAPI(title="✈️ SCL Flight Delay Predictor API")
 
 # Load models
-models = {
-    "logistic_regression": joblib.load("../models/logistic_regression.pkl"),
-    "random_forest": joblib.load("../models/random_forest.pkl"),
-    "xgboost": joblib.load("../models/xgboost.pkl"),
-    "voting_classifier": joblib.load("../models/voting_classifier.pkl")
+model_paths = {
+    "logistic_regression": os.path.join(MODEL_DIR, "logistic_regression.pkl"),
+    "random_forest": os.path.join(MODEL_DIR, "random_forest.pkl"),
+    "xgboost": os.path.join(MODEL_DIR, "xgboost.pkl"),
+    "voting_classifier": os.path.join(MODEL_DIR, "voting_classifier.pkl")
 }
+
+models = {}
+for name, path in model_paths.items():
+    if os.path.exists(path):
+        models[name] = joblib.load(path)
+    else:
+        raise FileNotFoundError(f"❌ Model file missing: {path}")
 
 class FlightInput(BaseModel):
     mes: int
@@ -38,16 +52,24 @@ class PredictionOutput(BaseModel):
     model_used: str
 
 @app.post("/predict", response_model=PredictionOutput)
-def predict_delay(flight: FlightInput, model_name: str = "logistic_regression"):
+def predict_delay(flight: FlightInput, model_name: str = Query(DEFAULT_MODEL)):
     if model_name not in models:
-        return {"error": "Invalid model name. Choose from: logistic_regression, random_forest, xgboost, voting_classifier"}
+        raise HTTPException(status_code=400, detail=f"Invalid model name: {model_name}")
 
     model = models[model_name]
     input_df = pd.DataFrame([flight.dict()])
-    X_input = preprocess_input(input_df)
 
-    prob = model.predict_proba(X_input)[0][1]
-    pred = int(prob >= 0.48 if model_name == "logistic_regression" else 0.5)
+    try:
+        X_input = preprocess_input(input_df)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Preprocessing failed: {str(e)}")
+
+    try:
+        prob = model.predict_proba(X_input)[0][1]
+        threshold = 0.48 if model_name == "logistic_regression" else 0.5
+        pred = int(prob >= threshold)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
     log_prediction(flight.dict(), pred, prob, model_name)
 
