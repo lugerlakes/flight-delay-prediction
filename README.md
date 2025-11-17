@@ -126,11 +126,7 @@ This section summarizes the project's value from an operational decision-making 
 | --------- | ----------- |
 | Situation | The system faced a high rate of undiagnosed operational failures (missed delays), leading to reactive damage control and poor service reliability. Failures were concentrated in high-risk operators and peak congestion periods. |
 | Task | Build a predictive alerting tool capable of identifying high-risk events (delay > 15 min) before they occur, prioritizing the minimization of False Negatives (missed delays). |
-| Action | 
-1. Data Rigor: Engineered causal features, such as the opera_historical_delay_rate.
-
-2. Model Calibration: Employed cost-sensitive learning and tuned the prediction threshold to 0.35 to optimize for Recall. 
-
-3. Deployment: Packaged the prediction logic into a low-latency FastAPI endpoint for real-time monitoring.|
-
+| Action | - Data Rigor: Engineered causal features, such as the  `opera_historical_delay_rate `. 
+- Model Calibration: Employed cost-sensitive learning and tuned the prediction threshold to 0.35 to optimize for Recall. 
+- Deployment: Packaged the prediction logic into a low-latency FastAPI endpoint for real-time monitoring.|
 | Result | The deployed system achieved a ~65% Recall rate at the operational threshold. This translates directly to an increased ability to proactively flag and mitigate two-thirds of critical operational failures, allowing teams to intervene (re-assign resources, notify stakeholders) and significantly improve the overall service reliability.|
