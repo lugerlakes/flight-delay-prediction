@@ -111,6 +111,7 @@ Requires **Python = 3.10**
 
 ### Run Prediction Apps
 | App | Command | Purpose |
+|-----|---------|-------- |
 | FastAPI | `uvicorn app.main:app --reload` | Production-like inference API |
 | Streamlit | `streamlit run app/streamlit_app.py` | Dispatcher/Analyst User Interface |
 | Modal | `modal deploy modal_stub.py` | Serverless, scalable deployment |
