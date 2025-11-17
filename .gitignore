@@ -1,26 +1,60 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
-
-# Environment
-.env
-.venv
+# ----------------------------------------------------------------------
+# 1. PYTHON ENVIRONMENT FILES
+# ----------------------------------------------------------------------
+# Python Virtual Environments (Ignore venv folders)
+.venv/
 env/
 venv/
-ENV/
+*flight_delay_prediction*/ # Ignores the specific venv folder name
+pyvenv.cfg
+Lib/
+lib/
+include/
 
-# Data
-data/processed/
-models/
-*.csv
+# ----------------------------------------------------------------------
+# 2. PYTHON COMPILED & BUILD ARTIFACTS
+# ----------------------------------------------------------------------
+# Compiled Python bytecode files
+__pycache__/
+*.pyc
+*.pyd
+*.so
 
-# IDEs and editors
+# Build and distribution directories
+dist/
+build/
+
+# ----------------------------------------------------------------------
+# 3. JUPYTER / NOTEBOOKS / IDE
+# ----------------------------------------------------------------------
+# Jupyter temporary files
+.ipynb_checkpoints/
+.jupyter/
+
+# Editor configuration files (VS Code, etc.)
 .vscode/
-.idea/
+*.swp
 
-# Others
-.DS_Store
+# ----------------------------------------------------------------------
+# 4. DATA AND MODEL ARTIFACTS (Ignore large binary files)
+# ----------------------------------------------------------------------
+# Intermediate and processed data (Should not be version controlled)
+/data/interim/
+/data/processed/
+/logs/
+
+# Binary model files saved via joblib/pickle
+*.pkl
+*.joblib
+*.h5
+*.hd5
+
+# Large files and logs
+*.log
+*.csv.zip
+
+# ----------------------------------------------------------------------
+# 5. MODAL/FASTAPI CACHE/TEMPORARY FILES
+# ----------------------------------------------------------------------
+# Modal configuration files (often local)
+modal.toml
