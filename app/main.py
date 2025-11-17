@@ -10,8 +10,11 @@ import uvicorn
 
 # --- 1. Load Artifacts ---
 # Define the paths for the model artifacts
-MODEL_PATH = '../models/voting_classifier_final.pkl'
-PREPROCESSOR_PATH = '../models/preprocessor_final.pkl'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(BASE_DIR, '..', 'models')
+MODEL_PATH = os.path.join(MODELS_DIR, 'voting_classifier_final.pkl')
+PREPROCESSOR_PATH = os.path.join(MODELS_DIR, 'preprocessor_final.pkl')
+
 TARGET_THRESHOLD = 0.35 # Threshold tuned in Stage 3 for high Recall (Operational Alert)
 
 try:
