@@ -1,48 +1,92 @@
 # Operational Risk Prediction for Complex Logistics Networks
 
-Predictive analytics project aimed at estimating the likelihood of delays in flights operated from/to Santiago Airport (SCL) in 2017. Includes exploratory data analysis, feature engineering, supervised model training, and robust evaluation with a reproducible approach.
+This predictive analytics project is designed to classify and predict the likelihood of an operational failure (e.g., flight delay > 15 minutes) in a complex logistics network. It uses real flight data from Santiago Airport (SCL) in 2017 as a case study for building a high-Recall alerting system.
+
+The core focus is demonstrating a complete MLOps lifecycle, including robust feature engineering, cost-sensitive modeling, scalable API deployment (FastAPI/Modal), and continuous monitoring strategy (Airflow).
 
 ## Goals
-- Analyze flight delays at SCL airport during 2017
-- Create meaningful synthetic features
-- Train classification models to predict delays
-- Evaluate performance and identify key drivers of delay
+- Operational Classification: Develop a classification model to predict high-risk operational status (delay_15) by optimizing for Recall (Sensitivity).
+- Robust Feature Engineering: Create high-signal, causal features (e.g., historical operator efficiency) and implement robust data imputation using missingness indicator flags.
+- Production Deployment: Serve predictions using a low-latency FastAPI backend containerized for serverless deployment (Modal).
+- MLOps Strategy: Outline a comprehensive strategy for model maintenance, retraining, and Model Drift detection using an orchestrator like Apache Airflow.
 
 ## Project Structure
+The project follows a modular, reproducible structure where logic is separated from experimentation.
 ```
 flight-delay-prediction/
-├── data/ # Original and processed datasets
-│ ├── raw/ # Raw CSV files (original flight data)
-│ └── processed/ # Cleaned data with engineered features
-├── models/ # Serialized trained models
-├── notebooks/ # Jupyter notebooks for EDA and modeling
-│ └── solution.ipynb # Main notebook with full workflow
-├── reports/ # Final reports and visualizations
-│ └── figures/ # Saved plots from EDA and modeling
-├── src/ # Modular source code for reuse
-│ ├── init.py
-│ ├── data/ # Data loading and preprocessing logic
-│ │ ├── load_data.py
-│ │ └── preprocess.py
-│ ├── features/ # Feature engineering scripts
-│ │ └── build_features.py
-│ ├── models/ # Training and evaluation scripts
-│ │ ├── train_model.py
-│ │ └── evaluate_model.py
-│ └── visualization/ # Custom visualizations
-│ └── visualize.py
-├── tests/ # Unit and integration tests
-│ ├── test_features.py
-│ ├── test_visualize.py
-│ └── test_visualize_advanced.py
-├── .gitignore # Files/folders to exclude from git
-├── LICENSE # Project license
-├── README.md # Project overview and documentation
-└── requirements.txt # Project dependencies
+├── app/ # Deployment layer
+│ ├── main.py # FastAPI backend for low-latency inference
+│ └── streamlit_app.py # Streamlit UI for operational analysts
+├── data/ 
+│ ├── raw/ # Original data
+│ └── interim/ # Cleaned, Feature Engineered data (saved from Stage 1/2)
+├── models/ # Serialized artifacts (.pkl)
+│ ├── preprocessor_final.pkl # ColumnTransformer pipeline
+│ └── voting_classifier_final.pkl # Final trained model
+├── notebooks/ # Step-by-step documentation of the process (Stage 1-4)
+│ ├── 01_Data_Acquisition_and_Cleaning.ipynb 
+│ ├── 02_Exploratory_Data_Analysis_and_Feature_Engineering.ipynb
+│ ├── 03_Model_Training_and_Evaluation.ipynb # Cost-sensitive modeling
+│ └── 04_Model_Persistence_and_Deployment_Prep.ipynb # MLOps planning
+├── src/ # Modular source code (used by notebooks and FastAPI)
+│ ├── data/
+│ │ └── data_pipeline.py # Functions for loading and cleaning
+│ └── features/
+│ └── feature_engineering.py # Logic for historical rates and imputation
+├── modal_stub.py # Serverless deployment definition for Modal
+├── requirements.txt # Dependencies
+└── README.md
 ```
 ---
+
+## Key Features (Causal & Engineered)
+The prediction relies heavily on engineered features that capture historical efficiency and robustness:
+
+| Feature Name        | Description                                                      | Rationale (Logistic Analogy) |
+|---------------------|------------------------------------------------------------------| ---------------------------- |
+|`opera_historical_delay_rate`| Average historical delay rate of the operating airline.| Partner Efficiency: Analogous to a restaurant or courier's historical latency. The strongest predictor of future risk.|
+| `dest_historical_delay_rate`| Average historical delay rate of the destination route. | Route Congestion: Captures systemic issues related to a specific delivery zone or hub.|
+| `tavg_is_missing`        | Binary flag (0/1) indicating if weather data was missing at the time of prediction. | Robustness: Ensures the model is resilient to production data quality issues (sensor/API failures)|
+| `period_day`     | Time bucket: morning, afternoon, night.|Capacity Strain: Captures accumulated delay and congestion peaks.|
+| `delay_15`        | Target: 1 if delay > 15 minutes, else 0. |Cost-Sensitive Target: Focuses the model on critical failures (the minority class).|
+
+---
+
+## Deployment Strategy (MLOps)
+The system is designed for scalable, decoupled deployment across two environments:
+
+1. Real-Time Inference (FastAPI & Modal)
+The prediction pipeline is exposed as a low-latency web service.
+
+  - FastAPI Backend (app/main.py): Handles model loading, preprocessing (using preprocessor_final.pkl), and prediction. It uses a tuned operational threshold (0.35) to maximize alert sensitivity (Recall).
+  - Streamlit UI (app/streamlit_app.py): Provides a simple analyst interface to input data and receive the operational alert (ALERT: High Delay Risk).
+  - Serverless Deployment (modal_stub.py): Deploys both the FastAPI endpoint and the Streamlit frontend efficiently using Modal, ensuring scalability without managing infrastructure.
+
+2. Model Maintenance (Apache Airflow Rationale)
+Airflow is used to automate the full life cycle, ensuring the model's longevity and performance in a live environment.
+
+| Stage | Tool/Goal | Rationale for Senior MLOps |
+|-----|---------|--------------------------|
+| Ingestion | Airflow | Orchestrates loading new daily/weekly order logs into the training data lake. |
+| Validation | Airflow + Notebooks | Schedules a daily task to read prediction logs from FastAPI and execute the validation portion of 03_Model_Training_and_Evaluation.ipynb to detect performance drops (Model Drift). |
+| Retraining Trigger | Airflow Logic | If the production Recall/ROC AUC metric falls below an operational threshold (e.g., 60%), Airflow automatically triggers the full retraining pipeline (Stage 1-3). |
+| Artifact Update | Modal/Airflow | The new model artifacts (.pkl) are automatically persisted and pushed to the deployment environment, ensuring the live service uses the latest, most accurate model. |
+
+---
+
+## Model Metrics Summary
+The project prioritized Recall (minimizing False Negatives, i.e., missed delays) over raw Accuracy, making it suitable for an operational alerting system.
+
+| Metric | Rationale |
+|-----|---------|
+| Recall (Tuned LogReg) | ~65%+ @ 0.35 Threshold |
+| Cost-Sensitive Learning | `class_weight='balanced'` |
+| Robust Ensemble | Voting Classifier |
+
+---
+
 ## Installation
-This project requires **Python = 3.10**
+Requires **Python = 3.10**
 1. Clone the repository:
 ```bash
    git clone https://github.com/lugerlakes/flight-delay-prediction.git
@@ -64,212 +108,10 @@ This project requires **Python = 3.10**
 ```bash
     pip install -r requirements.txt
 ```
----
-
-### Key Dependencies
-- Python:
-    - pandas
-    - numpy
-    - matplotlib
-    - seaborn
-    - scikit-learn
-    - xgboost
-    - jupyter
-
-## How to Run
-
-### Exploratory Analysis and Modeling
-
-Open the notebook:
-```bash
-jupyter notebook notebooks/solution.ipynb
-```
-Follow the sections for:
-
-- Data loading and cleaning
-
-- Feature engineering
-
-- Exploratory data analysis (EDA)
-
-- Model training and evaluation
-
-## Run tests and visualizations
-From the project root:
-```bash
-# Run feature pipeline test
-python tests/test_features.py
-```
-```bash
-# Run EDA visualizations
-python tests/test_visualize.py
-```
-```bash
-# Run advanced grouped plots
-python tests/test_visualize_advanced.py
-```
-Visual outputs will be saved to reports/figures/.
-
-
-# ✈️ Flight Delay Prediction – SCL 2017
-
-This project predicts the likelihood of a flight being delayed more than 15 minutes at **Arturo Merino Benítez Airport (SCL), Santiago, Chile**, using real 2017 data.
-
-It is designed with **operational deployment in mind**, aiming to support **airline operations teams** in **real-time delay risk prediction** based on scheduled flight metadata, enriched with contextual variables (holidays, strikes, weather) and multiple predictive models.
-
----
-
-## Goals
-
-- Understand operational patterns of commercial flight delays at SCL.
-- Create enriched synthetic features for temporal and contextual variability.
-- Train, evaluate, and compare multiple supervised learning models.
-- Expose a prediction interface via **FastAPI** and **Streamlit** for real-world airline use.
-- Enable delay prediction based on flight details: airline, route, time, seasonality, and weather.
-- Log predictions for future **monitoring** and **retraining**.
-
----
-
-## Project Structure
-```
-flight-delay-prediction/
-├── app/ # Deployment layer: FastAPI + Streamlit apps
-│ ├── main.py # FastAPI backend for prediction
-│ ├── streamlit_app.py # Streamlit UI
-│ └── utils.py # Shared preprocessing & logging utils
-├── data/ # Flight and weather data
-│ ├── raw/ # Raw flight and weather files
-│ └── processed/ # Cleaned & feature-engineered datasets
-├── models/ # Serialized trained models (.pkl)
-├── logs/ # Logs of predictions for monitoring
-│ └── predictions_log.csv
-├── notebooks/ # Jupyter notebook for full workflow
-│ └── flight_delay_prediction.ipynb
-├── reports/ # Figures and metrics
-│ ├── figures/ # Visualizations (EDA, metrics)
-│ └── summary.md # Final write-up
-├── src/ # Modular source code (EDA, features, models, visualization)
-│ ├── data/
-│ ├── features/
-│ ├── models/
-│ └── visualization/
-├── tests/ # Unit tests
-│ ├── test_features.py
-│ ├── test_visualize.py
-│ └── test_visualize_advanced.py
-├── modal_stub.py # Optional Modal deployment entrypoint
-├── requirements.txt # Dependencies
-├── .gitignore
-├── LICENSE
-└── README.md
-```
----
-
-## Deployment Strategy
-
-This project includes two deployable applications:
-
-### 🔹 FastAPI Backend (`app/main.py`)
-
-- `POST /predict`: accepts a JSON payload of flight features
-- Returns: predicted probability of delay and class (0 = on time, 1 = delayed)
-- Supports model selection (logistic_regression, voting_classifier, etc.)
-- Logs predictions to `logs/predictions_log.csv`
-
-### 🔹 Streamlit UI (`app/streamlit_app.py`)
-
-- User-friendly form to input flight data
-- Calls FastAPI backend
-- Displays:
-  - Delay probability
-  - Binary class
-  - Recommended action (e.g., flag/monitor)
-- Model selection available from dropdown
-
----
-
-## Features
-
-| Feature Name        | Description                                                      |
-|---------------------|------------------------------------------------------------------|
-| `delay_15`          | Target: 1 if delay > 15 mins, else 0                             |
-| `high_season`       | Chilean seasonal peak flag (Dec–Mar, July, September holidays)   |
-| `is_holiday`        | 1 if the date is a national holiday                              |
-| `is_strike_day`     | 1 if a strike affected operations that day                       |
-| `period_day`        | Time bucket: morning, afternoon, night                           |
-| `weather` (avg, min, max) | Historical weather conditions for SCL                    |
-
----
-
-## Installation
-
-**Requires Python 3.10**
-
-```bash
-git clone https://github.com/lugerlakes/flight-delay-prediction.git
-cd flight-delay-prediction
-python -m venv .venv
-source .venv/bin/activate  # Or .venv\Scripts\activate on Windows
-pip install -r requirements.txt
-```
-
-
-### Run the Notebook (Modeling & Analysis)
-```bash
-jupyter notebook notebooks/flight_delay_prediction.ipynb
-```
-Includes:
-- Exploratory analysis
-- Feature engineering
-- Model training: Logistic Regression, Random Forest, XGBoost, Voting Classifier
-- Threshold tuning (recall-focused)
-- Evaluation metrics and plots
 
 ### Run Prediction Apps
-#### Option 1: FastAPI (localhost API)
-```bash
-uvicorn app.main:app --reload
-```
-Then visit: http://127.0.0.1:8000/docs
-
-#### Option 2: Streamlit UI (form interface)
-```bash
-streamlit run app/streamlit_app.py
-```
-### Sample JSON Input
-```json
-{
-  "mes": 9,
-  "dianom": "Viernes",
-  "tipovuelo": "N",
-  "opera": "Sky Airline",
-  "siglades": "Antofagasta",
-  "period_day": "afternoon",
-  "high_season": 1,
-  "is_holiday": 1,
-  "is_strike_day": 0,
-  "tavg": 15.4,
-  "tmin": 12.3,
-  "tmax": 21.7
-}
-```
-## Metrics Summary (Model Selection)
-
-| Model                           | Accuracy | Recall | Precision | F1 Score | ROC AUC | Key Insight                                                 |
-|--------------------------------|----------|--------|-----------|----------|---------|-------------------------------------------------------------|
-| Logistic Regression (tuned)    | 59.7%    | **63.9%** | 26.0%    | **0.369** | 0.657   | Highest sensitivity to delayed flights                      |
-| Voting Classifier              | **71.3%**| 45.1%  | 31.0%    | **0.368** | **0.660** | Balanced and robust ensemble performance                    |
-| Logistic Regression (default)  | 63.0%    | 58.3%  | 26.9%    | **0.368** | 0.657   | Transparent and effective without threshold tuning          |
-| Random Forest                  | 70.0%    | 41.9%  | 28.7%    | 0.341    | 0.634   | Interpretable and stable under different scenarios          |
-| XGBoost                        | 82.3%    | 11.0%  | **62.3%** | 0.186    | **0.705** | High AUC, but impractical for delay detection due to low recall |
-
-## Future Work
-- Monitor model drift using prediction logs
-- Schedule periodic retraining with updated data
-
-## Operational Use Case
-Airline schedulers or dispatchers can use this tool to:
-- Estimate risk of delay before flight execution
-- Flag high-risk flights for rescheduling, buffering, or monitoring
-- Improve on-time performance (OTP) by incorporating historical risk patterns
-- Proactively act on holiday or strike day effects
+| App | Command | Purpose |
+| FastAPI | `uvicorn app.main:app --reload` | Production-like inference API |
+| Streamlit | `streamlit run app/streamlit_app.py` | Dispatcher/Analyst User Interface |
+| Modal | `modal deploy modal_stub.py` | Serverless, scalable deployment |
+---

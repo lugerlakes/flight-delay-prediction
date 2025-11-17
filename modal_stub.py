@@ -1,24 +1,41 @@
-# modal_stub.py — Deploy FastAPI via Modal v1.x
-import os
-import modal
-import uvicorn
-import shlex
-import subprocess
-from pathlib import Path
+from modal import Stub, Image, asgi_app, app
+from typing import Dict, Any
 
-api_script = Path(__file__).parent / "app" / "main.py"
-api_remote = "/root/flight-delay-prediction/app/main.py"
+# --- 1. Define Environment (Image) ---
+# We define a base image with all necessary dependencies installed from requirements.txt.
+# This ensures a reproducible environment for Modal.
+image = Image.from_registry("python:3.10-slim") \
+    .pip_install_from_file("requirements.txt")
 
-image = (
-    modal.Image.debian_slim(python_version="3.11")
-    .pip_install("fastapi", "uvicorn", "joblib", "pandas", "numpy", "python-dotenv")
-    .add_local_file(str(api_script), api_remote)
-)
+# --- 2. Define Stub (Application) ---
+# The Stub is the main object Modal uses to manage the application and its deployment.
+stub = Stub(name="flight-delay-predictor", image=image)
 
-app = modal.App(name="flight-delay-api", image=image)
+# --- 3. Define the FastAPI Service ---
+@stub.function()
+@asgi_app()
+def fastapi_app():
+    """
+    Deploys the FastAPI application for low-latency prediction inference.
+    
+    Note: The ML artifacts (.pkl files) must be uploaded to Modal's file system 
+    or persisted to an external bucket/volume for the app/main.py to load them.
+    """
+    from app.main import app as fastapi_instance # Import the FastAPI instance
+    return fastapi_instance
 
-@app.function()
-@modal.web_server(port=int(os.getenv("FASTAPI_PORT", "8000")))
-def run_api():
-    cmd = f"uvicorn app.main:app --host 0.0.0.0 --port {os.getenv('FASTAPI_PORT', 8000)}"
-    subprocess.Popen(cmd, shell=True)
+# --- 4. Define the Streamlit UI ---
+@stub.function()
+@app()
+def streamlit_ui():
+    """Deploys the Streamlit UI for the human interface (Dispatcher/Analyst)."""
+    # NOTE: This requires the Streamlit app to be configured to call the FastAPI endpoint
+    # that Modal generates for the 'fastapi_app' function.
+    
+    # We execute the Streamlit application file directly
+    import subprocess
+    subprocess.run(["streamlit", "run", "app/streamlit_app.py"])
+
+# --- Deployment Instructions ---
+# To deploy this: modal deploy modal_stub.py
+# After deployment, Modal provides URLs for the FastAPI endpoint and the Streamlit UI.

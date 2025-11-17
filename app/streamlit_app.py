@@ -1,78 +1,131 @@
-# streamlit_app.py — Airline Flight Delay Prediction Interface
-
 import streamlit as st
-import requests
 import pandas as pd
-import os
-from dotenv import load_dotenv
+import numpy as np
+import requests
+import joblib
 
-# Load environment variables
-load_dotenv()
-API_URL = os.getenv("API_URL", "https://lugerlakes--flight-delay-api-run-api-dev.modal.run")
+# --- 1. Configuration and Artifact Loading ---
 
-# Page config
-st.set_page_config(page_title="SCL Flight Delay Predictor", layout="centered")
-st.title("✈️ SCL Flight Delay Predictor ✈️")
-st.markdown(
-    "This tool helps **airline operations personnel** predict the risk of flight delays based on flight attributes and weather conditions."
-)
+# Streamlit App Title and Description
+st.set_page_config(page_title="Flight Delay Risk Classifier", layout="wide")
 
-# Input form
-with st.form("flight_form"):
-    st.subheader("📋 Flight Information")
+# Load artifacts for reference/static features (NOTE: In production, Streamlit would call FastAPI)
+try:
+    PREPROCESSOR_PATH = '../models/preprocessor_final.pkl'
+    # We load the preprocessor just to get the list of unique categories (airlines, destinations)
+    preprocessor = joblib.load(PREPROCESSOR_PATH)
+    # Extract categories from the 'cat' transformer (assuming index 1)
+    ohe_transformer = preprocessor.named_transformers_['cat']
+    
+    # We must extract the original values for dropdowns (Simulating dynamic list from DB)
+    # NOTE: The OHE categories include the feature name prefix (e.g., 'cat__opera_LATAM')
+    
+    # Placeholder lists based on typical SCL data (replace with actual loaded categories if possible)
+    AIRLINES = ['Latin American Wings', 'JetSmart SPA', 'American Airlines', 'LATAM AIRLINES GROUP']
+    DESTINATIONS = ['Buenos Aires', 'Miami', 'Antofagasta', 'Lima']
+    PERIODS = ['morning', 'afternoon', 'night']
+    DIAS = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo']
 
+except FileNotFoundError:
+    st.error("Error: Model artifacts not found. Using placeholder data.")
+    AIRLINES = ['Airline A', 'Airline B']
+    DESTINATIONS = ['Dest X', 'Dest Y']
+    PERIODS = ['morning', 'afternoon', 'night']
+    DIAS = ['Monday', 'Tuesday', 'Wednesday']
+
+
+st.title("✈️ Operational Risk Classifier (SCL Flight Delay)")
+st.subheader("Simulación: Predicción de Riesgo de Retraso de Pedido/Vuelo")
+st.markdown("---")
+
+# --- 2. Input Form (Dispatcher Interface) ---
+
+with st.form("risk_prediction_form"):
+    st.markdown("**Datos Operacionales del Vuelo/Pedido**")
+    
     col1, col2 = st.columns(2)
     with col1:
-        mes = st.number_input("Month", 1, 12, step=1)
-        dianom = st.selectbox("Day of the Week", ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"])
-        tipovuelo = st.selectbox("Flight Type", ["N", "I"])
-        period_day = st.selectbox("Period of Day", ["morning", "afternoon", "night"])
+        # Analogous to selecting the Restaurant/Courier
+        selected_opera = st.selectbox("Airline Operator (OPERA):", AIRLINES)
+        # Analogous to delivery zone
+        selected_dest = st.selectbox("Destination (SIGLADES):", DESTINATIONS)
+        # Analogous to time bucket (Crucial Feature)
+        selected_period = st.selectbox("Time Period (PERIOD_DAY):", PERIODS)
+    
     with col2:
-        opera = st.selectbox("Airline", ["Sky Airline", "LATAM Airlines Group", "JetSmart SPA"])
-        siglades = st.selectbox("Destination City", ["Antofagasta", "Arica", "Iquique", "Puerto Montt", "Calama", "Concepcion"])
-        high_season = st.radio("High Season?", [0, 1], horizontal=True)
-        is_holiday = st.radio("Holiday?", [0, 1], horizontal=True)
-        is_strike_day = st.radio("Strike Day?", [0, 1], horizontal=True)
+        selected_dianom = st.selectbox("Day of the Week (DIANOM):", DIAS)
+        selected_tipovuelo = st.selectbox("Flight Type (TIPOVUELO):", ['I', 'N']) # International/National
+        # Month (Simulated input)
+        selected_mes = st.slider("Month (MES):", 1, 12, 6)
+    
+    st.markdown("---")
+    st.markdown("**Datos Externos y Históricos (Valores de ejemplo)**")
+    
+    col3, col4 = st.columns(2)
+    with col3:
+        # TAVG (Simulated Weather Data)
+        selected_tavg = st.slider("Avg Temperature (TAVG):", 5.0, 30.0, 18.0)
+        # Historical Rate (Crucial Engineered Feature)
+        # In a real app, this would be looked up from a DB, here we take a sample/placeholder
+        selected_historical_rate = st.number_input("Historical Operator Delay Rate:", value=0.185, step=0.001)
+    
+    with col4:
+        # Missing Flag (Robustness check)
+        selected_missing_flag = st.checkbox("Weather Data Missing?", value=False)
+        # Historical Destination Rate
+        selected_dest_rate = st.number_input("Historical Destination Delay Rate:", value=0.100, step=0.001)
 
-    st.subheader("🌡️ Weather Conditions at Departure")
-    tavg = st.number_input("Avg Temperature (°C)", value=15.0)
-    tmin = st.number_input("Min Temperature (°C)", value=10.0)
-    tmax = st.number_input("Max Temperature (°C)", value=20.0)
+    submitted = st.form_submit_button("Predict Operational Risk")
 
-    st.subheader("🧠 Model Selection")
-    model = st.selectbox("Choose a model", ["logistic_regression", "voting_classifier", "random_forest", "xgboost"])
+# --- 3. Prediction Logic and Output ---
 
-    submitted = st.form_submit_button("🚀 Predict Delay")
-
-# Submit request
 if submitted:
-    input_payload = {
-        "mes": mes,
-        "dianom": dianom,
-        "tipovuelo": tipovuelo,
-        "opera": opera,
-        "siglades": siglades,
-        "period_day": period_day,
-        "high_season": high_season,
-        "is_holiday": is_holiday,
-        "is_strike_day": is_strike_day,
-        "tavg": tavg,
-        "tmin": tmin,
-        "tmax": tmax
+    # 1. Prepare data for the API (must match FlightFeatures Pydantic model in app/main.py)
+    input_data = {
+        "mes": selected_mes,
+        "dianom": selected_dianom,
+        "tipovuelo": selected_tipovuelo,
+        "opera": selected_opera,
+        "siglades": selected_dest,
+        "period_day": selected_period,
+        "tavg": selected_tavg,
+        "opera_historical_delay_rate": selected_historical_rate,
+        "dest_historical_delay_rate": selected_dest_rate,
+        "tavg_is_missing": 1 if selected_missing_flag else 0
     }
+    
+    # --- SIMULATION OF FASTAPI CALL ---
+    
+    # Replace with actual API call in a real deployment
+    # API_URL = "http://127.0.0.1:8000/predict"
+    # response = requests.post(API_URL, json=input_data)
+    # result = response.json()
+    
+    # --- OFFLINE/MOCK PREDICTION (For testing without running FastAPI) ---
+    st.warning("Prediction running in MOCK mode (Offline simulation).")
+    
+    # Mock Prediction: Higher historical rate -> higher mock probability
+    mock_proba = 0.15 + (selected_historical_rate * 2.5) 
+    mock_threshold = 0.35
+    
+    if mock_proba > 0.5:
+        mock_proba = 0.5
+        
+    mock_is_delayed = 1 if mock_proba >= mock_threshold else 0
+    
+    # --- Display Results (Operational Alert) ---
+    
+    st.markdown("### 🚨 Prediction Results")
+    
+    if mock_is_delayed == 1:
+        st.error(f"**CRITICAL ALERT:** High Probability of Operational Delay.")
+        st.markdown(f"**Recommended Action:** **FLAG** this order/flight for mitigation (e.g., increase ETA buffer, reassign courier, notify supervisor).")
+    else:
+        st.success("**Status:** On-Time Expected.")
+        st.markdown(f"**Recommended Action:** Monitor as Normal.")
 
-    with st.spinner("⏳ Contacting prediction engine..."):
-        try:
-            response = requests.post(f"{API_URL}/predict", json=input_payload, params={"model_name": model})
-            response.raise_for_status()
-            result = response.json()
+    st.markdown("---")
+    st.metric("Probability of Delay (> 15 min)", f"{mock_proba:.2%}")
+    st.markdown(f"*(Tuned Operational Threshold: {mock_threshold:.2%})*")
 
-            st.success(f"🎯 Predicted Delay Probability: {result['delay_probability']:.2%}")
-            st.info(f"🛬 Predicted Class: {'✈️ DELAY' if result['predicted_class'] == 1 else '✅ ON TIME'}")
-            st.caption(f"Model Used: `{result['model_used']}`")
-
-            st.markdown("### 📊 Raw Input Sent to API")
-            st.json(input_payload)
-
-        except Exception as e:
-            st.error(f"❌ Prediction failed: {e}")
+# To run: streamlit run app/streamlit_app.py
