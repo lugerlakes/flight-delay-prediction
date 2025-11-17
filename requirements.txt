@@ -1,38 +1,30 @@
-# Project Dependencies:
-
-# Core libraries
+# --- 1. CORE ML & DEPLOYMENT (Essential for Modal/FastAPI)
 pandas
 numpy
-matplotlib
-seaborn
-
-# Machine Learning
 scikit-learn
 xgboost
 joblib
 scipy
 
-# Backend
+# API & Serverless
 fastapi
 uvicorn
 pydantic
-
-# Deployment
 modal
-
-# Jupyter for local notebooks
-jupyter
-
-# Frontend
-streamlit
-
-# Env management
 python-dotenv
 
-ipykernel
+# Frontend (Streamlit)
+streamlit
 
-# MLOps Orchestration (For defining DAGs)
+# ----------------------------------------------------------------------
+# 2. DEVELOPMENT & GOVERNANCE (Install AFTER deployment succeeds)
+# ----------------------------------------------------------------------
+# These packages often cause installation conflicts on Windows.
+ipykernel
+jupyter
 apache-airflow
+matplotlib
+seaborn
 
 
 
