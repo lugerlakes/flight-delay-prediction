@@ -31,6 +31,9 @@ python-dotenv
 
 ipykernel
 
+# MLOps Orchestration (For defining DAGs)
+apache-airflow
+
 
 
 
