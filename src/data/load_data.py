@@ -21,7 +21,10 @@ def load_raw_data(filename: str = "dataset_SCL.csv", data_dir: str = "data/raw")
     file_path = os.path.join(project_root, data_dir, filename)
 
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found at: {file_path}")
+        # Fallback for local execution
+        if os.path.exists(filename):
+            file_path = filename
+        else:
+            raise FileNotFoundError(f"File not found at: {file_path}")
 
     return pd.read_csv(file_path, low_memory=False)
-

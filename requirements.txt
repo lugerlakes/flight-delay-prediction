@@ -16,17 +16,13 @@ python-dotenv
 # Frontend (Streamlit)
 streamlit
 
-# ----------------------------------------------------------------------
-# 2. DEVELOPMENT & GOVERNANCE (Install AFTER deployment succeeds)
-# ----------------------------------------------------------------------
-# These packages often cause installation conflicts on Windows.
 ipykernel
 jupyter
 apache-airflow
 matplotlib
 seaborn
 
-
+requests
 
 
 
