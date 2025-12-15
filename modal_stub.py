@@ -1,8 +1,8 @@
-import modal
+from modal import App, Image, Mount, asgi_app, Secret
 import os
 
 # --- 1. Base Image Configuration ---
-image = modal.Image.debian_slim().pip_install(
+image = Image.debian_slim().pip_install(
     "pandas",
     "numpy",
     "scikit-learn",
@@ -12,27 +12,27 @@ image = modal.Image.debian_slim().pip_install(
     "pydantic"
 )
 
-# --- CORRECCIÓN AQUÍ: Usamos 'App' en lugar de 'Stub' ---
-app = modal.App("flight-delay-predictor-prod")
+# Definimos la App (antes Stub)
+app = App("flight-delay-predictor-prod")
 
 # --- 2. Mounts (File Transfer) ---
+# Usamos la clase Mount importada directamente
 local_mounts = [
-    modal.Mount.from_local_dir("app", remote_path="/root/app"),
-    modal.Mount.from_local_dir("models", remote_path="/root/models")
+    Mount.from_local_dir("app", remote_path="/root/app"),
+    Mount.from_local_dir("models", remote_path="/root/models")
 ]
 
 # --------------------------------------------------------------------------
 # --- 3. Backend Function (FastAPI - Inference Engine) ---
 # --------------------------------------------------------------------------
 
-# --- CORRECCIÓN AQUÍ: Usamos @app.function en lugar de @stub.function ---
 @app.function(
     image=image,
     mounts=local_mounts,
-    # secrets=[modal.Secret.from_name("my-api-secrets")], 
+    # secrets=[Secret.from_name("my-api-secrets")], 
     keep_warm=1
 )
-@modal.asgi_app()
+@asgi_app()
 def fastapi_app():
     from app.main import app as fastapi_instance
     return fastapi_instance
@@ -40,6 +40,4 @@ def fastapi_app():
 # --------------------------------------------------------------------------
 # --- 4. Deployment Instructions ---
 # --------------------------------------------------------------------------
-#
-# 1. Deploy the Backend:
-#    $ modal deploy modal_stub.py
+# 1. Deploy: modal deploy modal_stub.py

@@ -1,13 +1,15 @@
-# Operational Risk Prediction for Complex Logistics Networks
-
+# Operational Risk Prediction for Complex Logistics Networks (SCL Case Study)
 This predictive analytics project is designed to classify and predict the likelihood of an operational failure (e.g., flight delay > 15 minutes) in a complex logistics network. It uses real flight data from Santiago Airport (SCL) in 2017 as a case study for building a high-Recall alerting system.
 
 The core focus is demonstrating a complete MLOps lifecycle, including robust feature engineering, cost-sensitive modeling, scalable API deployment (FastAPI/Modal), and continuous monitoring strategy (Airflow).
 
 ## Goals
 - Operational Classification: Develop a classification model to predict high-risk operational status (delay_15) by optimizing for Recall (Sensitivity).
-- Robust Feature Engineering: Create high-signal, causal features (e.g., historical operator efficiency) and implement robust data imputation using missingness indicator flags.
+
+- Robust Feature Engineering: Create high-signal, causal features (e.g., historical operator efficiency) and incorporate environmental variables (Wind/Pressure).
+
 - Production Deployment: Serve predictions using a low-latency FastAPI backend containerized for serverless deployment (Modal).
+
 - MLOps Strategy: Outline a comprehensive strategy for model maintenance, retraining, and Model Drift detection using an orchestrator like Apache Airflow.
 
 ## Project Structure
@@ -44,13 +46,13 @@ flight-delay-prediction/
 ---
 
 ## Key Features (Causal & Engineered)
-The prediction relies heavily on engineered features that capture historical efficiency and robustness:
+The prediction relies on engineered features that capture historical efficiency and environmental context:
 
 | Feature Name        | Description                                                      | Rationale (Logistic Analogy) |
 |---------------------|------------------------------------------------------------------| ---------------------------- |
 |`opera_historical_delay_rate`| Average historical delay rate of the operating airline.| Partner Efficiency: Analogous to a restaurant or courier's historical latency. The strongest predictor of future risk.|
 | `dest_historical_delay_rate`| Average historical delay rate of the destination route. | Route Congestion: Captures systemic issues related to a specific delivery zone or hub.|
-| `tavg_is_missing`        | Binary flag (0/1) indicating if weather data was missing at the time of prediction. | Robustness: Ensures the model is resilient to production data quality issues (sensor/API failures)|
+| `wspd / pres`        | Wind Speed (Knots) and Atmospheric Pressure. | Environmental Constraints: External factors that impact logistical flow. Validated via T-Test in Stage 3.|
 | `period_day`     | Time bucket: morning, afternoon, night.|Capacity Strain: Captures accumulated delay and congestion peaks.|
 | `delay_15`        | Target: 1 if delay > 15 minutes, else 0. |Cost-Sensitive Target: Focuses the model on critical failures (the minority class).|
 
@@ -71,21 +73,21 @@ Airflow is used to automate the full life cycle, ensuring the model's longevity 
 
 | Stage | Tool/Goal | Rationale for Senior MLOps |
 |-----|---------|--------------------------|
+| Monitoring | Airflow Task | A custom Branch Operator checks the Production Recall weekly. If it drops below 0.60 (Drift), the retraining pipeline is triggered.|
 | Ingestion | Airflow | Orchestrates loading new daily/weekly order logs into the training data lake. |
-| Validation | Airflow + Notebooks | Schedules a daily task to read prediction logs from FastAPI and execute the validation portion of 03_Model_Training_and_Evaluation.ipynb to detect performance drops (Model Drift). |
-| Retraining Trigger | Airflow Logic | If the production Recall/ROC AUC metric falls below an operational threshold (e.g., 60%), Airflow automatically triggers the full retraining pipeline (Stage 1-3). |
-| Artifact Update | Modal/Airflow | The new model artifacts (.pkl) are automatically persisted and pushed to the deployment environment, ensuring the live service uses the latest, most accurate model. |
+| Training | PythonOperator | Retrains the XGBoost classifier with updated data to capture new patterns (e.g., seasonal weather shifts).|
+| Deployment | CI/CD | New artifacts (xgb_final.pkl) are automatically validated and pushed to the production volume. |
 
 ---
 
 ## Model Metrics Summary
-The project prioritized Recall (minimizing False Negatives, i.e., missed delays) over raw Accuracy, making it suitable for an operational alerting system.
+We selected XGBoost as the Champion Model due to its superior ability to detect delays (Recall) compared to linear baselines and voting ensembles.
 
-| Metric | Rationale |
-|-----|---------|
-| Recall (Tuned LogReg) | ~65%+ @ 0.35 Threshold |
-| Cost-Sensitive Learning | `class_weight='balanced'` |
-| Robust Ensemble | Voting Classifier |
+| Metric | Value | Rationale |
+|-----|---------| -----------|
+| Recall (Class 1) | ~78% | Primary KPI. Successfully identifies nearly 8 out of 10 delayed flights. |
+| ROC-AUC | 0.71 | Robust discrimination capability despite high noise. |
+| Threshold | 0.35 | Optimized cut-off point to balance Sensitivity vs. False Alarms |
 
 ---
 
@@ -116,9 +118,9 @@ Requires **Python = 3.10**
 ### Run Prediction Apps
 | App | Command | Purpose |
 |-----|---------|-------- |
-| FastAPI | `uvicorn app.main:app --reload` | Production-like inference API |
-| Streamlit | `streamlit run app/streamlit_app.py` | Dispatcher/Analyst User Interface |
-| Modal | `modal deploy modal_stub.py` | Serverless, scalable deployment |
+| FastAPI | `uvicorn app.main:app --reload` | Starts the inference engine at http://127.0.0.1:8000 |
+| Streamlit Frontend | `streamlit run app/streamlit_app.py` | Launches the UI dashboard for testing |
+| Modal Deploy | `modal deploy modal_stub.py` | Deploys backend to the cloud |
 ---
 
 ### Impact & Results
@@ -126,7 +128,7 @@ This section summarizes the project's value from an operational decision-making 
 
 | Component | Description |
 | --------- | ----------- |
-| Situation | The system faced a high rate of undiagnosed operational failures (missed delays), leading to reactive damage control and poor service reliability. Failures were concentrated in high-risk operators and peak congestion periods. |
+| Situation | The system faced a high rate of undiagnosed operational failures (missed delays), leading to reactive damage control and poor service reliability. |
 | Task | Build a predictive alerting tool capable of identifying high-risk events (delay > 15 min) before they occur, prioritizing the minimization of False Negatives (missed delays). |
-| Action | The solution involved Data Rigor by engineering causal features such as the `opera_historical_delay_rate`, followed by Model Calibration where cost-sensitive learning was employed and the prediction threshold was tuned to 0.35 to optimize for Recall. Finally, the prediction logic was Deployed by packaging it into a low-latency FastAPI endpoint for real-time monitoring.|
-| Result | The deployed system achieved a ~65% Recall rate at the operational threshold. This translates directly to an increased ability to proactively flag and mitigate two-thirds of critical operational failures, allowing teams to intervene (re-assign resources, notify stakeholders) and significantly improve the overall service reliability.|
+| Action | Implemented a Cost-Sensitive XGBoost model with engineered historical risk features. Validated the impact of weather variables (wind, pressure). Deployed via FastAPI with MLOps monitoring logic.|
+| Result | The deployed system achieved a ~78% Recall rate at the operational threshold. This translates directly to an increased ability to proactively flag and mitigate the vast majority of critical delays, allowing teams to intervene (re-assign resources, notify stakeholders) effectively.|
